@@ -65,7 +65,7 @@ class SvgFile():
         self.svgFont = "osifont"
         param_draft = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Labels")
         th = param_draft.GetFloat("LabelSize", 18)
-        th *= 1.3333 # temporary solution to get teh Right Size but it's not normal
+        th *= 1.3333 # temporary solution to get the Right Size but it's not normal
         # Millimeter to Pixel (X) Conversion Table
         self.px=int(th * 3.7795275591)
         
@@ -82,12 +82,13 @@ class SvgFile():
         line =  '<path stroke="#000" stroke-width="'+str(width)+'" d="'+startPnt+endPnt+'" />\n'
         self.file = self.file + line
 
-    def svgArrow(self,x1,y1,x2,y2,width):
+    def svgArrow(self,x1,y1,x2,y2,width,angle):
         '''create one line in the svg file'''
         startPnt = ' M'+str(x1)+','+str(y1)
         endPnt = ' L'+str(x2)+','+str(y2)
         line =  '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" /></marker></defs>\n'
         line +=  '<g><path d="'+startPnt+endPnt+'" stroke="#000000" stroke-width="'+str(width)+'" marker-end="url(#arrowhead)" /></g>\n'
+        line +=  '<g transform="translate('+str(x2)+','+str(y2)+')" > <path transform="rotate('+str(angle)+')" d="M 0.0,0.0 12.0,3.0 12.0,-3.0 0.0,0.0 Z" fill="#000000" stroke="#000000" /></g>\n'
         self.file = self.file + line
         
     def svgCircle(self,xCenter,yCenter,radius,width):
@@ -114,12 +115,12 @@ class edgeSymbols:
         '''return file with base symbol'''
         svgFile = SvgFile()
         
-        svgFile.svgLine(50,60,100,60,4)
-        svgFile.svgLine(50,12,50,62,4)
+        svgFile.svgLine(50,60,100,60,2)
+        svgFile.svgLine(50,12,50,62,2)
 
-        ''' Line for arrow '''
+        ''' Line for Arrow '''
         svgFile.svgLine(40,65,100,65,1)
-        svgFile.svgArrow(40,65,10,90,1)
+        svgFile.svgArrow(40,65,10,90,1,-45)
 
         ''' Circle All Around '''
         if allAround == True:
@@ -138,15 +139,15 @@ class edgeSymbols:
             svgFile.svgCircle(40,65,6,1) # all around
             moveLeft = 5
             
-        svgFile.svgLine(50+moveLeft,60,100+moveLeft,60,4)
-        svgFile.svgLine(50+moveLeft,12,50+moveLeft,62,4)
+        svgFile.svgLine(50+moveLeft,60,100+moveLeft,60,2)
+        svgFile.svgLine(50+moveLeft,12,50+moveLeft,61,2)
        
         ''' Line for arrow '''
         svgFile.svgLine(40,65,100+moveLeft,65,1)
-        px = 50*math.cos(angle-45)
-        py = 50*math.sin(angle-45)
+        px = 50*math.cos(math.radians(angle-45))
+        py = 50*math.sin(math.radians(angle-45))
         print("X {}  Y {}".format(px,py))
-        svgFile.svgArrow(40,65,40-px,65-py,1)
+        svgFile.svgArrow(40,65,40-px,65-py,1,float(angle-45))
  
         undercutHightText = panel.undercutHight.text()
         undercutHightTextLen = undercutHightText.__len__()
@@ -171,9 +172,9 @@ class edgeSymbols:
         passingLowText = panel.passingLow.text()
         passingLowTextLen = passingLowText.__len__()
         if undercutLowTextLen :
-            svgFile.svgText(110+moveLeft,40,undercutHightText)
+            svgFile.svgText(105+moveLeft,40,undercutHightText)
         if passingLowTextLen :
-            svgFile.svgText(110+moveLeft,70,passingLowText)        
+            svgFile.svgText(105+moveLeft,70,passingLowText)        
         
         additionText = panel.leAddition.text()
         additionTextLen = additionText.__len__()
@@ -187,7 +188,6 @@ class DefinePanel:
     '''Define the combo-view panel'''
     def __init__(self):
         self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
-        '''self.raValues= ["50","25","12,5","6,3","3,2","1,6","0,8","0,4","0,2","0,1","0,05","0,025"]'''
         self.aRound = False
         param_draft = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Labels")
         ft = param_draft.GetString("LabelFont", "osifont")
@@ -227,37 +227,37 @@ class DefinePanel:
         self.scene = QtGui.QGraphicsScene() # create scene
         self.form.graphicsView.setScene(self.scene) # insert scene, graphicsView is an item of type QGraphicsView in TaskEdgeSymbols02.ui
 
-        # LineEdit  showing method:
+        # LineEdit  showing edgePlus:
         self.edgePlus = QtGui.QLineEdit('')
         self.edgePlus.resize(20,20)
         self.scene.edgePlus = self.scene.addWidget(self.edgePlus)
         self.scene.edgePlus.setPos(0,-75)
 
-        # LineEdit  showing method:
+        # LineEdit  showing edgeMinus:
         self.edgeMinus = QtGui.QLineEdit('-0,5')
         self.edgeMinus.resize(20,20)
         self.scene.edgeMinus = self.scene.addWidget(self.edgeMinus)
         self.scene.edgeMinus.setPos(0,-50)
 
-        # LineEdit  showing method:
+        # LineEdit  showing undercutHight:
         self.undercutHight = QtGui.QLineEdit('')
         self.undercutHight.resize(20,20)
         self.scene.undercutHight = self.scene.addWidget(self.undercutHight)
         self.scene.undercutHight.setPos(-40,-135)
         
-        # LineEdit  showing method:
+        # LineEdit  showing passingHight:
         self.passingHight = QtGui.QLineEdit('')
         self.passingHight.resize(20,20)
         self.scene.passingHight = self.scene.addWidget(self.passingHight)
         self.scene.passingHight.setPos(-40,-110)
 
-        # LineEdit  showing method:
+        # LineEdit  showing undercutLow:
         self.undercutLow = QtGui.QLineEdit('')
         self.undercutLow.resize(20,20)
         self.scene.undercutLow = self.scene.addWidget(self.undercutLow)
         self.scene.undercutLow.setPos(50,-25)
         
-        # LineEdit  showing method:
+        # LineEdit  showing passingLow:
         self.passingLow = QtGui.QLineEdit('')
         self.passingLow.resize(20,20)
         self.scene.passingLow = self.scene.addWidget(self.passingLow)
@@ -274,8 +274,7 @@ class DefinePanel:
         self.on_ModeChanged()
         
     def on_ModeChanged(self):
-        '''slot: change the used all Around'''
-        print("on_ModeChanged {}".format(self.form.rbAround.isChecked()))
+        '''slot: change the option all Around'''
         self.aRound = self.form.rbAround.isChecked()
         pixMap = self.textureFromSvgString(edgeSymbols.baseSymbol(self.aRound))
         pixmapItem = QtGui.QGraphicsPixmapItem(pixMap)
@@ -288,10 +287,9 @@ class DefinePanel:
         doc = App.activeDocument()
         mySymbol = doc.addObject('TechDraw::DrawViewSymbol','EdgeSymbol')
         mySymbol.Symbol = edgeSymbols.completeSymbol(float(self.form.leAngle.text()),self.aRound,self.form.leFont.currentText())
-        print("{}".format(mySymbol.Symbol))
+        # print("{}".format(mySymbol.Symbol))
         page = doc.findObjects('TechDraw::DrawPage')
         page[0].addView(mySymbol) # svg included as a string
-        '''mySymbol.Rotation = int(self.form.leAngle.text())'''
         FreeCADGui.Control.closeDialog()
 
 path_to_ui = os.path.dirname(__file__) + "/TaskEdgeSymbols.ui"
