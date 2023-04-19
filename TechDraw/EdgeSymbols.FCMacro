@@ -36,7 +36,7 @@ from __future__ import division
 
 __Name__ = 'FreeCAD Edge Symbols'
 __Author__ = '5@xes'
-__Version__ = '1.0'
+__Version__ = '2.0'
 __Date__ = '2023-04-19'
 __License__ = 'LGPL-2.0-or-later'
 __Web__ = 'http://www.freecadweb.org'
@@ -86,8 +86,7 @@ class SvgFile():
         '''create one line in the svg file'''
         startPnt = ' M'+str(x1)+','+str(y1)
         endPnt = ' L'+str(x2)+','+str(y2)
-        line =  '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" /></marker></defs>\n'
-        line +=  '<g><path d="'+startPnt+endPnt+'" stroke="#000000" stroke-width="'+str(width)+'" marker-end="url(#arrowhead)" /></g>\n'
+        line =  '<g><path d="'+startPnt+endPnt+'" stroke="#000000" stroke-width="'+str(width)+'" /></g>\n'
         line +=  '<g transform="translate('+str(x2)+','+str(y2)+')" > <path transform="rotate('+str(angle)+')" d="M 0.0,0.0 12.0,3.0 12.0,-3.0 0.0,0.0 Z" fill="#000000" stroke="#000000" /></g>\n'
         self.file = self.file + line
         
@@ -138,6 +137,12 @@ class edgeSymbols:
         if allAround == True:
             svgFile.svgCircle(40,65,6,1) # all around
             moveLeft = 5
+ 
+        additionText = panel.leAddition.text()
+        additionTextLen = additionText.__len__()
+        if additionTextLen :
+            svgFile.svgText(50+moveLeft,60,panel.leAddition.text())
+            moveLeft += additionTextLen*15
             
         svgFile.svgLine(50+moveLeft,60,100+moveLeft,60,2)
         svgFile.svgLine(50+moveLeft,12,50+moveLeft,61,2)
@@ -176,10 +181,7 @@ class edgeSymbols:
         if passingLowTextLen :
             svgFile.svgText(105+moveLeft,70,passingLowText)        
         
-        additionText = panel.leAddition.text()
-        additionTextLen = additionText.__len__()
-        if additionTextLen :
-            svgFile.svgText(0,60,panel.leAddition.text())
+
         
         svgFile.svgFinish()
         return svgFile.file
@@ -188,7 +190,9 @@ class DefinePanel:
     '''Define the combo-view panel'''
     def __init__(self):
         self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
+        self.pbTabs = []
         self.aRound = False
+        self.tab = 0 
         param_draft = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Labels")
         ft = param_draft.GetString("LabelFont", "osifont")
         self.symbolFont = ft
@@ -198,6 +202,8 @@ class DefinePanel:
         prof = 0 
             
         self.form.rbAround.clicked.connect(self.on_ModeChanged)
+        self.form.plusMoins.clicked.connect(self.on_plusMoins)
+        
         self.createSceneItems()
         for font in font_db.families():
             if font == ft :
@@ -205,7 +211,19 @@ class DefinePanel:
             iind +=1
             self.form.leFont.addItem(font)
         self.form.leFont.setCurrentIndex(prof)
-
+        
+    ''''    
+        def get_active_line_edit(self):
+            active_widget = None
+            main_window = FreeCADGui.getMainWindow()
+            if main_window:
+                focus_widget = main_window.focusWidget()
+                if isinstance(focus_widget, QtGui.QLineEdit):
+                    active_widget = focus_widget
+            print("Clic de souris détecté {}".format(active_widget))
+            return active_widget       
+    '''
+        
     def textureFromSvgString(self,svgString):
         ''' Render a svg-string to a pixmap'''
         byteArray = bytearray(svgString,'utf-8') # create byte array from string
@@ -272,6 +290,10 @@ class DefinePanel:
 
         # insert the symbol icon:
         self.on_ModeChanged()
+    
+    def on_tabChanged(self,id):
+        self.tab = id
+        print("on_tabChanged {}".format(id))
         
     def on_ModeChanged(self):
         '''slot: change the option all Around'''
@@ -282,6 +304,10 @@ class DefinePanel:
         pixmapItem.setZValue(-2)
         sceneItem = self.scene.addItem(pixmapItem)
 
+    def on_plusMoins(self):
+        '''self.get_active_line_edit()'''        
+        panel.edgeMinus.setText("±")   
+        
     def accept(self):
         '''slot: OK pressed'''
         doc = App.activeDocument()
