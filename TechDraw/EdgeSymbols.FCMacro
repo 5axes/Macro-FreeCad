@@ -115,7 +115,7 @@ class edgeSymbols:
         svgFile = SvgFile()
         
         svgFile.svgLine(50,60,100,60,4)
-        svgFile.svgLine(50,0,50,60,4)
+        svgFile.svgLine(50,12,50,62,4)
 
         ''' Line for arrow '''
         svgFile.svgLine(40,65,100,65,1)
@@ -162,9 +162,9 @@ class edgeSymbols:
         edgeMinusText = panel.edgeMinus.text()
         edgeMinusTextLen = edgeMinusText.__len__()
         if edgePlusTextLen :
-            svgFile.svgText(70+moveLeft,20,edgePlusText)
+            svgFile.svgText(60+moveLeft,20,edgePlusText)
         if edgeMinusTextLen :   
-            svgFile.svgText(70+moveLeft,50,edgeMinusText)
+            svgFile.svgText(60+moveLeft,50,edgeMinusText)
 
         undercutLowText = panel.undercutLow.text()
         undercutLowTextLen = undercutLowText.__len__()
