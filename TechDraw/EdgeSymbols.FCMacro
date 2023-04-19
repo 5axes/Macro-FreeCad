@@ -212,18 +212,6 @@ class DefinePanel:
             self.form.leFont.addItem(font)
         self.form.leFont.setCurrentIndex(prof)
         
-    ''''    
-        def get_active_line_edit(self):
-            active_widget = None
-            main_window = FreeCADGui.getMainWindow()
-            if main_window:
-                focus_widget = main_window.focusWidget()
-                if isinstance(focus_widget, QtGui.QLineEdit):
-                    active_widget = focus_widget
-            print("Clic de souris détecté {}".format(active_widget))
-            return active_widget       
-    '''
-        
     def textureFromSvgString(self,svgString):
         ''' Render a svg-string to a pixmap'''
         byteArray = bytearray(svgString,'utf-8') # create byte array from string
@@ -307,7 +295,18 @@ class DefinePanel:
     def on_plusMoins(self):
         '''self.get_active_line_edit()'''        
         panel.edgeMinus.setText("±")   
-        
+
+  
+    def get_active_line_edit(self):
+        active_widget = None
+        main_window = FreeCADGui.getMainWindow()
+        if main_window:
+            focus_widget = main_window.focusWidget()
+            if isinstance(focus_widget, QtGui.QLineEdit):
+                active_widget = focus_widget
+        print("Clic de souris détecté {}".format(active_widget))
+        return active_widget       
+    
     def accept(self):
         '''slot: OK pressed'''
         doc = App.activeDocument()
@@ -315,7 +314,11 @@ class DefinePanel:
         mySymbol.Symbol = edgeSymbols.completeSymbol(float(self.form.leAngle.text()),self.aRound,self.form.leFont.currentText())
         # print("{}".format(mySymbol.Symbol))
         page = doc.findObjects('TechDraw::DrawPage')
-        page[0].addView(mySymbol) # svg included as a string
+        nb=len(page)
+        active_view = FreeCADGui.ActiveDocument.ActiveView
+        gp=active_view.getPage()
+        gp.addView(mySymbol)        # svg included as a string
+        #page[nb].addView(mySymbol)
         FreeCADGui.Control.closeDialog()
 
 path_to_ui = os.path.dirname(__file__) + "/TaskEdgeSymbols.ui"

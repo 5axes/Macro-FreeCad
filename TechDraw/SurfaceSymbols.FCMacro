@@ -380,7 +380,11 @@ class DefinePanel:
         mySymbol = doc.addObject('TechDraw::DrawViewSymbol','SurfaceSymbol')
         mySymbol.Symbol = surfaceSymbols.completeSymbol(self.useISO,self.form.leFont.currentText())
         page = doc.findObjects('TechDraw::DrawPage')
-        page[0].addView(mySymbol) # svg included as a string
+        nb=len(page)
+        active_view = FreeCADGui.ActiveDocument.ActiveView
+        gp=active_view.getPage()
+        gp.addView(mySymbol)        # svg included as a string
+        #page[nb].addView(mySymbol)
         mySymbol.Rotation = int(self.form.leAngle.text())
         FreeCADGui.Control.closeDialog()
 
