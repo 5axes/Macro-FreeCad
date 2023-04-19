@@ -1,0 +1,389 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#***************************************************************************
+#*                                                                         *
+#*   Copyright (c) 2023 edi                           *
+#*                                                                         *
+#*   This program is free software; you can redistribute it and/or modify  *
+#*   it under the terms of the GNU Lesser General Public License (LGPL)    *
+#*   as published by the Free Software Foundation; either version 2 of     *
+#*   the License, or (at your option) any later version.                   *
+#*   for detail see the LICENCE text file.                                 *
+#*                                                                         *
+#*   This program is distributed in the hope that it will be useful,       *
+#*   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+#*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+#*   GNU Library General Public License for more details.                  *
+#*                                                                         *
+#*   You should have received a copy of the GNU Library General Public     *
+#*   License along with this program; if not, write to the Free Software   *
+#*   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+#*   USA                                                                   *
+#*                                                                         *
+#***************************************************************************
+"""
+FreeCAD Surface Symbols
+INSTALLATION
+This script is made to be used as a FreeCAD macro, and to be placed
+inside your macros  (default is $HOME/.FreeCAD/Macro on mac/linux,
+C:/Users/youruser/Application Data/FreeCAD/Macro on windows).
+After it is installed on the above location, it will be available
+in the macros menu.
+USAGE
+Edit a surface symbol and add it to a TechDraw drawing
+"""
+from __future__ import division
+
+__Name__ = 'FreeCAD Surface Symbols'
+__Author__ = 'edi,5@xes'
+__Version__ = '7.0'
+__Date__ = '2023-04-18'
+__License__ = 'LGPL-2.0-or-later'
+__Web__ = 'http://www.freecadweb.org'
+__Wiki__ = ''
+__Icon__ = ''
+__Help__ = 'Launch, Edit the surface symbol and add it to a TechDraw drawing'
+__Status__ = ''
+__Requires__ = 'FreeCAD v0.20+'
+__Communication__ = ''
+__Files__ = 'TaskSurfaceFinishSymbols.ui SurfaceSymbols.FCMacro'
+
+import FreeCAD,FreeCADGui,Part
+from PySide import QtCore # neu
+from PySide import QtGui
+from PySide import QtSvg
+from functools import partial
+from io import StringIO
+
+class SvgFile():
+    '''class to create svg files'''
+
+    def __init__(self):
+        self.file = ''
+        self.svgHead(50,64)
+        self.svgFont = "osifont"
+        param_draft = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Labels")
+        th = param_draft.GetFloat("LabelSize", 18)
+        th *= 1.3333 # temporary solution to get teh Right Size but it's not normal
+        # Millimeter to Pixel (X) Conversion Table
+        self.px=int(th * 3.7795275591)
+        
+    def svgHead(self,width,high):
+        '''create head of a svg file'''
+        version = '<?xml version="1.0"?>\n'
+        size =  '<svg width="'+str(width)+'" height="'+str(high)+'">\n'
+        self.file = self.file + version + size
+
+    def svgLine(self,x1,y1,x2,y2,width):
+        '''create one line in the svg file'''
+        startPnt = ' M'+str(x1)+','+str(y1)
+        endPnt = ' L'+str(x2)+','+str(y2)
+        line =  '<path stroke="#000" stroke-width="'+str(width)+'" d="'+startPnt+endPnt+'" />\n'
+        self.file = self.file + line
+
+    def svgCircle(self,xCenter,yCenter,radius,width):
+        '''create one circle in the svg file'''
+        circle = '<circle cx="'+str(xCenter)+'" cy="'+str(yCenter)+'" r="'+str(radius)+'" fill="none" stroke="#000" stroke-width="'+str(width)+'"/>'
+        self.file = self.file + circle
+
+    def svgText(self,xText,yText,text):
+        '''create one text in the svg file'''               
+        if len(self.svgFont) :
+            line = '<text x="'+str(xText)+'" y="'+str(yText)+'" style="font-size:'+str(self.px)+'px;font-family:'+self.svgFont+'">'+text+'</text>\n'
+        else :
+            line = '<text x="'+str(xText)+'" y="'+str(yText)+'" style="font-size:'+str(self.px)+'px">'+text+'</text>\n'
+        self.file = self.file + line
+
+    def svgRhomboid(self,xPos,yPos,edge,width):
+        '''create 4 lines building a rhomboid'''
+        x1,y1 = xPos,yPos
+        x2,y2 = xPos+edge,yPos
+        x3,y3 = xPos+1.3*edge,yPos-0.9*edge
+        x4,y4 = xPos+0.3*edge,yPos-0.9*edge
+        self.svgLine(x1,y1,x2,y2,width)
+        self.svgLine(x2,y2,x3,y3,width)
+        self.svgLine(x3,y3,x4,y4,width)
+        self.svgLine(x4,y4,x1,y1,width)
+
+    def svgFinish(self):
+        '''finish svg file'''
+        self.file = self.file +  '</svg>\n'
+
+class surfaceSymbols:
+    '''class to create surface symbols'''
+
+    def baseSymbol(typ,mode,allAround):
+        '''return file with base symbol'''
+        svgFile = SvgFile()
+        
+        svgFile.svgLine(0,44,12,64,2)
+        svgFile.svgLine(12,64,42,14,2)
+        
+        ''' Circle Material removal prohibited'''
+        if typ == 1:
+            svgFile.svgCircle(12,50,7,2)
+        
+        ''' Line to close the triangle for Material removal required '''
+        if typ == 2:
+            svgFile.svgLine(0,44,24,44,2)
+        
+        ''' Circle All Around '''
+        if allAround == 1:
+            svgFile.svgCircle(42,14,6,2)
+        
+        '''Profile Method, ISO 21920'''
+        if mode == 1 :
+            svgFile.svgLine(3,32,23,32,2)
+        
+        '''Areal Symbol, ISO 25178'''
+        if mode == 2 :
+            svgFile.svgRhomboid(3,32,20,2)
+            
+        svgFile.svgFinish()
+        return svgFile.file
+
+    def completeSymbol(useISO, font):
+        '''create the complete symbol shown in the drawing'''
+        svgFile = SvgFile()
+        svgFile.svgFont = font
+        
+        svgFile.svgLine(0,44,12,64,1)
+        svgFile.svgLine(12,64,42,14,1)
+        
+        moveLeft = 0
+        if panel.selectedType == 1  :
+            svgFile.svgCircle(12,50,7,1) # circle
+        if panel.selectedType == 2:
+            svgFile.svgLine(0,44,24,44,1) # horizontal
+        if panel.selectedAllAround == 1:
+            svgFile.svgCircle(42,14,6,1) # all around
+            moveLeft = 5
+        if panel.selectedMode == 1:
+            svgFile.svgLine(3,32,23,32,1)
+        if panel.selectedMode == 2:
+            svgFile.svgRhomboid(3,32,20,1) # area
+            
+        methodText = panel.leMethod.text()
+        svgFile.svgText(45+moveLeft,11,methodText)
+        methodTextLen = methodText.__len__()
+        
+        if not useISO:
+            if panel.selectedMode == 0:
+                decLeft = -10
+            else :
+                decLeft = -30 
+            maxRoughtText = panel.cbMaxRought.itemText(panel.cbMaxRought.currentIndex())
+            minRoughtText = panel.cbMinRought.itemText(panel.cbMinRought.currentIndex())
+            svgFile.svgText(decLeft,20,maxRoughtText)        
+            svgFile.svgText(decLeft,40,minRoughtText)
+
+        raText = panel.leSamLength.text()
+        svgFile.svgText(45+moveLeft,35,raText)
+        raTextLen = raText.__len__()
+        maxTextLen = max(methodTextLen,raTextLen)*10+moveLeft        
+
+        waveText = panel.leWave.text()
+        svgFile.svgText(45+moveLeft,60,waveText)
+
+        svgFile.svgLine(42,14,42+int(maxTextLen),14,1)
+        svgFile.svgText(25,60,panel.cbLay.itemText(panel.cbLay.currentIndex()))
+        svgFile.svgText(-35,60,panel.leAddition.text())
+        svgFile.svgFinish()
+        return svgFile.file
+
+class DefinePanel:
+    '''Define the combo-view panel'''
+    def __init__(self):
+        self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
+        self.pbButtons = []
+        self.iconPixmaps = []
+        '''self.raValues= ["50","25","12,5","6,3","3,2","1,6","0,8","0,4","0,2","0,1","0,05","0,025"]'''
+        
+        self.selectedType = 0
+        self.selectedMode = 0
+        self.selectedAllAround = 0
+        self.useISO = True
+        param_draft = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Labels")
+        ft = param_draft.GetString("LabelFont", "osifont")
+        self.symbolFont = ft
+        # self.form.leFont.setText(ft) 
+        font_db = QtGui.QFontDatabase()
+        iind = 0
+        prof = 0 
+        if ft == "Iso-GPS" :
+            self.laySymbols = ["","=","⟂","X","M","C","R","P"] 
+        else :
+            self.laySymbols = ["","=","⟂","X","M","C","R","P","ϛ","Ϝ","ϝ","Ϟ","ϟ","Ϡ"] 
+            
+        self.createButtonIcons()
+        self.createSceneItems()
+        for font in font_db.families():
+            if font == ft :
+                prof = iind
+            iind +=1
+            self.form.leFont.addItem(font)
+        self.form.leFont.setCurrentIndex(prof)
+
+    def textureFromSvgString(self,svgString):
+        ''' Render a svg-string to a pixmap'''
+        byteArray = bytearray(svgString,'utf-8') # create byte array from string
+        xmlStream = QtCore.QXmlStreamReader(byteArray) # create xml stream from byte array
+        pixmap = QtGui.QPixmap() # create an empty pixmap
+        svgRender = QtSvg.QSvgRenderer() # create an empty rendering container
+        if svgRender.load(xmlStream): # load the xml stream into the container
+            size = svgRender.defaultSize() # get container default size
+            image = QtGui.QImage(size.width(),size.height(),QtGui.QImage.Format_RGB32) # create an empty image, having width, height and colors
+            image.fill(QtGui.QColor(240,240,240)) # fill the background gray
+            painting = QtGui.QPainter(image) # create a painting, fill it with the image
+            svgRender.render(painting) # fill the svg into the image
+            painting.end() # finish the image
+            pixmap = QtGui.QPixmap.fromImage(image)
+        return pixmap
+
+    def createButtonIcons(self):
+        '''create the icons and slots on the buttons'''
+        self.pbButtons.append(self.form.pbIcon01)
+        self.pbButtons.append(self.form.pbIcon02)
+        self.pbButtons.append(self.form.pbIcon03)
+        self.pbButtons.append(self.form.pbIcon04)
+        self.pbButtons.append(self.form.pbIcon05)
+        self.pbButtons.append(self.form.pbIcon06)
+
+        for i in range(3):
+            self.iconPixmaps.append(self.textureFromSvgString(surfaceSymbols.baseSymbol(i,0,0)))
+        
+        self.iconPixmaps.append(self.textureFromSvgString(surfaceSymbols.baseSymbol(0,0,1)))
+        self.iconPixmaps.append(self.textureFromSvgString(surfaceSymbols.baseSymbol(0,1,0)))
+        self.iconPixmaps.append(self.textureFromSvgString(surfaceSymbols.baseSymbol(0,2,0)))
+        
+        for i in range(6):
+            self.pbButtons[i].setIcon(QtGui.QIcon(self.iconPixmaps[i]))
+            self.pbButtons[i].clicked.connect(partial(self.on_IconChanged,i))
+        
+        self.form.rbISO.clicked.connect(partial(self.on_StandardChanged,True))
+        self.form.rbASME.clicked.connect(partial(self.on_StandardChanged,False))
+        
+    def createSceneItems(self):
+        '''Create scene and all items used in the scene'''
+        self.scene = QtGui.QGraphicsScene() # create scene
+        self.form.graphicsView.setScene(self.scene) # insert scene, graphicsView is an item of type QGraphicsView in TaskSurfaceSymbols02.ui
+        
+        # insert horizontal line
+        self.scene.line = self.scene.addLine(-9.5,-115.5,95,-115.5, QtGui.QPen(QtGui.QBrush(QtCore.Qt.black), 2))
+        
+        # LineEdit  showing method:
+        self.leMethod = QtGui.QLineEdit('')
+        self.leMethod.resize(90,20)
+        self.scene.leMethod = self.scene.addWidget(self.leMethod)
+        self.scene.leMethod.setPos(2,-142)
+        # LineEdit  showing addition:
+        self.leAddition = QtGui.QLineEdit('')
+        self.leAddition.resize(25,20)
+        self.scene.leAddition = self.scene.addWidget(self.leAddition)
+        self.scene.leAddition.setPos(-120,-85)
+        self.scene.leAddition.setZValue(-2)
+        # ComboBox showing Ra values:
+        '''
+        self.cbRA = QtGui.QComboBox()
+        self.cbRA.resize(90,20)
+        for value in self.raValues:
+            self.cbRA.addItem("Ra "+value)
+        self.scene.cbRA = self.scene.addWidget(self.cbRA)
+        self.scene.cbRA.setPos(2,-113)
+        '''
+        # LineEdit showing sampling length value:
+        self.leSamLength = QtGui.QLineEdit('Ra 0,8')
+        self.leSamLength.resize(90,20)
+        self.scene.leSamLength = self.scene.addWidget(self.leSamLength)
+        self.scene.leSamLength.setPos(2,-113)
+        
+        # ComboBox showing Lay:
+        self.cbLay = QtGui.QComboBox()
+        font = QtGui.QFont(self.symbolFont, 12)
+        self.cbLay.setFont(font)
+        self.cbLay.resize(20,20)
+        for symbol in self.laySymbols:
+            self.cbLay.addItem(symbol)
+        self.scene.cbLay = self.scene.addWidget(self.cbLay)
+        self.scene.cbLay.setPos(-23,-85)
+
+        self.leWave = QtGui.QLineEdit('')
+        self.leWave.resize(90,20)
+        self.scene.leWave = self.scene.addWidget(self.leWave)
+        self.scene.leWave.setPos(55,-85)
+        
+        # ComboBox showing minimal roughness grade:
+        self.cbMinRought = QtGui.QComboBox()
+        self.cbMinRought.resize(55,20)
+        self.cbMinRought.addItem("")
+        for number in range(1,12):
+            self.cbMinRought.addItem("N"+str(number))
+        self.scene.cbMinRought = self.scene.addWidget(self.cbMinRought)
+        self.scene.cbMinRought.setPos(-120,-118)
+        self.scene.cbMinRought.setZValue(1)
+        self.scene.cbMinRought.hide()
+        # ComboBox showing maximal roughness grade:
+        self.cbMaxRought = QtGui.QComboBox()
+        self.cbMaxRought.resize(55,20)
+        self.cbMaxRought.addItem("")
+        for number in range(1,12):
+            self.cbMaxRought.addItem("N"+str(number))
+        self.scene.cbMaxRought = self.scene.addWidget(self.cbMaxRought)
+        self.scene.cbMaxRought.setPos(-120,-143)
+        self.scene.cbMaxRought.setZValue(1)
+        self.scene.cbMaxRought.hide()
+        # insert the symbol icon:
+        self.on_IconChanged(0)
+
+    def on_IconChanged(self,iconNumber):
+        '''slot: change surface roughness icon'''
+    
+        if iconNumber < 3 :
+            self.selectedType = iconNumber            
+        if iconNumber == 3 :
+            if self.selectedAllAround == 1 :
+                self.selectedAllAround = 0  
+            else :
+                self.selectedAllAround = 1
+        if iconNumber == 4 :
+            if self.selectedMode == 1 :
+                self.selectedMode = 0                
+            else :
+                self.selectedMode = 1
+        if iconNumber == 5 :
+            if self.selectedMode == 2 :
+                self.selectedMode = 0
+            else :
+                self.selectedMode = 2
+                
+         
+        '''pixMap = self.iconPixmaps[iconNumber]'''
+        pixMap = self.textureFromSvgString(surfaceSymbols.baseSymbol(self.selectedType,self.selectedMode,self.selectedAllAround))
+        pixmapItem = QtGui.QGraphicsPixmapItem(pixMap)
+        pixmapItem.setPos(-50,-130)
+        pixmapItem.setZValue(-1)
+        sceneItem = self.scene.addItem(pixmapItem)
+        
+    def on_StandardChanged(self,isISO):
+        '''slot: change the used standard ISO/ASME'''
+        self.useISO = isISO
+        if isISO:
+            self.scene.cbMinRought.hide()
+            self.scene.cbMaxRought.hide()
+        else:
+            self.scene.cbMinRought.show()
+            self.scene.cbMaxRought.show()
+
+    def accept(self):
+        '''slot: OK pressed'''
+        doc = App.activeDocument()
+        mySymbol = doc.addObject('TechDraw::DrawViewSymbol','SurfaceSymbol')
+        mySymbol.Symbol = surfaceSymbols.completeSymbol(self.useISO,self.form.leFont.currentText())
+        page = doc.findObjects('TechDraw::DrawPage')
+        page[0].addView(mySymbol) # svg included as a string
+        mySymbol.Rotation = int(self.form.leAngle.text())
+        FreeCADGui.Control.closeDialog()
+
+path_to_ui = os.path.dirname(__file__) + "/TaskSurfaceFinishSymbols.ui"
+panel=DefinePanel() 
+FreeCADGui.Control.showDialog(panel)
