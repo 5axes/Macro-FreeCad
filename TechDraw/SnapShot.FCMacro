@@ -1,0 +1,177 @@
+#### xraf32_view3DTD: take a snapshot of the 3D view and embed it in one or more
+#### TechDraw pages as a SVG symbol
+#### Author: xraf32
+#### usage: hide all unwanted 3D objects, set the desired camera angle, select all the 
+#### TechDraw pages where a copy of the snapshot is desired and run the Macro
+
+## temporary directory: use '/dev/shm' to write to a RAM file or '/tmp' to write to a disk file. 
+## most modern linux systems have both options. The first avoids unnecessary disk IO
+#tmpDir = "C:/Temp/"
+#tmpDir = "/tmp/"
+
+MaxDim = 100 # maximum dimension of the image in mm
+
+from PySide import QtGui
+import os
+import tempfile
+tmpDir=tempfile.gettempdir()
+
+def checkTmpDir():
+	global tmpDir
+	tmpFileLabel = App.ActiveDocument.Uid + '_3Dsnap'
+	tmpFilePath = os.path.join(tmpDir, tmpFileLabel + '.png')
+	try:
+		f = open(tmpFilePath, 'w')
+		f.close()
+		os.remove(tmpFilePath)
+		return (tmpFileLabel, '.png')
+	except Exception as e:
+		return (tmpFileLabel, str(e))
+
+def filterSelectionTD():
+	sel = Gui.Selection.getSelection()
+	selTD = []
+	for i in sel:
+		if type(i).__name__ == 'DrawPage':
+			selTD.append(i)
+	return (sel, selTD)
+
+def activateView3D(): # if there is no available View3DInventor, creates one and returns true
+	mw=Gui.getMainWindow()
+	views=mw.findChildren(QtGui.QMainWindow)
+	closeActiveView = False
+
+	view3D = None
+	for i in views:
+		if i.metaObject().className() == 'Gui::View3DInventor':
+			view3D = i
+			break
+	if view3D is None:
+		Gui.runCommand("Std_ViewCreate")
+		mw=Gui.getMainWindow()
+		views=mw.findChildren(QtGui.QMainWindow)
+		view3D = views[-1]
+		closeActiveView = True
+
+	view3D.setFocus()
+	return closeActiveView
+
+def error(id=0, msg=''):
+	errStr = "ERROR {:3}: ".format(id)
+	print("error {}".format(id))
+
+	if id == 0: 
+		id = 0
+	elif id == 1: 
+		print(errStr + "cannot create temporary file at the directory: " + msg)
+	elif id == 2: 
+		print(errStr + "no TechDraw pages were selected")
+	elif id == 3: 
+		print(errStr + "no objects which appear in the 3D view were selected")
+	
+	return id
+
+def cropTransparent(imgPath):
+	## taken from: https://gist.github.com/odyniec/3470977
+	from PIL import Image
+	img = Image.open(imgPath) # reopen the image as PIL Image object
+	bbox = img.getbbox() # get the bounding box of the non-transparent pixels
+	img = img.crop(bbox) # crop according to that bounding box
+	(width, height) = img.size # get cropped image dimensions
+	img2 = Image.new("RGBA", (width, height), (0,0,0,0)) # create new image with these dimensions
+	img2.paste(img, (0, 0)) # paste the cropped image in this new image
+	# if the non-TechDraw selected objects are NOT geometry, then the 3D view will be empty
+	# and then the snapshot will be fully transparent. So, we get the extreme values of all 4 channels
+	# and check if all values are zero
+	extrema = img2.getextrema()
+	extremasum = 0
+	for i in extrema:
+		extremasum += i[0] + i[1]
+	if extremasum == 0:
+		return (0, 0, None)
+	## save binary image in memory
+	## taken from: https://jdhao.github.io/2019/07/06/python_opencv_pil_image_to_bytes/
+	from io import BytesIO
+	buf = BytesIO()
+	img2.save(buf, format='PNG')
+	binimg = buf.getvalue()
+	# print(str(width) + " ; " + str(height))
+	return (width, height, binimg)
+
+def wrapImageInSVG(_width, _height, _binimg):
+	## taken from: https://softwarerecs.stackexchange.com/questions/76954/how-can-i-convert-an-svg-with-linked-images-to-embed-those-images-inside-the-svg
+	from base64 import b64encode
+	widthmm = MaxDim
+	heightmm = MaxDim
+	if _width > _height:
+		heightmm = MaxDim * 1.0 / _width * _height
+	elif _height > _width:
+		widthmm = MaxDim * 1.0 / _height * _width
+
+	strw = str(widthmm)
+	strh = str(heightmm)
+	encoded_string = 'data:image/png;base64,' + str(b64encode(_binimg), 'utf-8')
+
+	SVGdata = '<?xml version="1.0" encoding="UTF-8"?>\n' + \
+		'<svg version="1.2" width="' + strw + 'mm" height="' + strh + 'mm"\n' + \
+		'  viewBox="0 0 ' + strw + ' ' + strh + '"\n' + \
+		'  xmlns="http://www.w3.org/2000/svg">\n' + \
+		'  <image x="0" y="0" width="' + strw + '" height="' + strh + '" xlink:href="' + encoded_string + '"/>\n' + \
+		'</svg>'
+	return SVGdata
+
+def insertSVGIntoTDPages(_SVGdata, _selTD):
+	for i in _selTD:
+		sym = App.ActiveDocument.addObject('TechDraw::DrawViewSymbol', i.Label + '_3D')
+		sym.Symbol = _SVGdata
+		i.addView(sym)
+
+def restoreConfig(_b_sel, _b_av, _b_cam, _closeActiveView):
+	# selection
+	Gui.Selection.clearSelection()
+	for i in _b_sel:
+		Gui.Selection.addSelection(i)
+	if _closeActiveView: # the 3D view was created just for the snapshot, so destroy it
+		Gui.runCommand("Std_CloseActiveWindow")
+	else: # the 3D view was not created just for the snapshot, it was already there. So restore its camera
+		Gui.activeDocument().activeView().setCamera(_b_cam)
+	# QT call to restore the previous ActiveView
+	_b_av.setFocus()
+
+def mainProcedure(): # b_var is backup_variable
+	global tmpDir
+	global MaxDim
+
+	tmpFileLabel, tmpFileExt = checkTmpDir()
+	if tmpFileExt != '.png': # error 1: bad temporary file path
+		return error(1, tmpDir + '\nTrace message: ' + tmpFileExt)
+	tmpFilePath = os.path.join(tmpDir, tmpFileLabel + tmpFileExt)
+	
+	b_sel, selTD = filterSelectionTD()
+
+	if  len(selTD) == 0: # error 2: no TechDraw pages in selection
+		return error(2)
+
+	b_av = Gui.getMainWindow().centralWidget().activeSubWindow().widget() # backup active view
+	closeActiveView = activateView3D() # ensure the ActiveView is a View3DInventor
+	av = Gui.activeDocument().activeView()
+	b_cam = av.getCamera() # backup its camera position
+	Gui.SendMsgToActiveView('ViewFit') # fit camera to the visible objects
+	# selection was already backed-up in b_sel by splitSelection()
+	# clear selection to prevent colour distortion in the snapshot
+	Gui.Selection.clearSelection()
+	av.saveImage(tmpFilePath, MaxDim*20, MaxDim*20, "Transparent") # snapshot
+	w, h, binimg = cropTransparent(tmpFilePath) # get binary image with cropped width and height
+	if w + h == 0: # error 3: empty 3D view
+		return error(3)
+	# wrap the binary image inside a virtual SVG and insert it as a TechDraw symbol. 
+	# Advantages over bitmaps:
+	#   1. Avoid broken links, since symbols are embedded inside the document
+	#   2. No crop feature, so no need to adjust canvas dimensions when changing the scale
+	#   3. Reduced disk IO and/or system call footprints
+	#   4. Simple to include additional vector or raster graphics in the future, or add metatags
+	SVGdata = wrapImageInSVG(w, h, binimg)
+	insertSVGIntoTDPages(SVGdata, selTD)
+	restoreConfig(b_sel, b_av, b_cam, closeActiveView)
+
+mainProcedure()
