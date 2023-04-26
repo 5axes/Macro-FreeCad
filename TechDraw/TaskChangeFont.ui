@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <widget class="QWidget" name="SelectFont">
+  <property name="windowTitle">
+   <string>Change Font</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QGridLayout" name="gridLayout_2">
+     <item row="0" column="0">
+      <widget class="QLabel" name="lbFont">
+       <property name="text">
+        <string>Symbol font:</string>
+       </property>
+      </widget>
+     </item>	 
+     <item row="0" column="1">
+      <widget class="QComboBox" name="leFont">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Font&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
+     </item>	 
+    </layout>
+   </item>
+  </layout>
+ </widget>
+</ui>

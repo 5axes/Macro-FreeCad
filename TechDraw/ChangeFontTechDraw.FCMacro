@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#***************************************************************************
+#*                                                                         *
+#*   Copyright (c) 2023 edi                           *
+#*                                                                         *
+#*   This program is free software; you can redistribute it and/or modify  *
+#*   it under the terms of the GNU Lesser General Public License (LGPL)    *
+#*   as published by the Free Software Foundation; either version 2 of     *
+#*   the License, or (at your option) any later version.                   *
+#*   for detail see the LICENCE text file.                                 *
+#*                                                                         *
+#*   This program is distributed in the hope that it will be useful,       *
+#*   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+#*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+#*   GNU Library General Public License for more details.                  *
+#*                                                                         *
+#*   You should have received a copy of the GNU Library General Public     *
+#*   License along with this program; if not, write to the Free Software   *
+#*   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+#*   USA                                                                   *
+#*                                                                         *
+#***************************************************************************
+"""
+FreeCAD Change Font
+INSTALLATION
+This script is made to be used as a FreeCAD macro, and to be placed
+inside your macros  (default is $HOME/.FreeCAD/Macro on mac/linux,
+C:/Users/youruser/Application Data/FreeCAD/Macro on windows).
+After it is installed on the above location, it will be available
+in the macros menu.
+USAGE
+Select the font and press OK
+"""
+
+__Name__ = 'FreeCAD Change Font'
+__Author__ = 'edi,5@xes'
+__Version__ = '7.0'
+__Date__ = '2023-04-26'
+__License__ = 'LGPL-2.0-or-later'
+__Web__ = 'http://www.freecadweb.org'
+__Wiki__ = ''
+__Icon__ = ''
+__Help__ = 'Change Font in a TechDraw for Dimension, Ballon & Annotation'
+__Status__ = ''
+__Requires__ = 'FreeCAD v0.20+'
+__Communication__ = ''
+__Files__ = 'TaskChangeFont.ui ChangeFontTechDraw.FCMacro'
+
+import FreeCAD,FreeCADGui
+from PySide import QtCore # neu
+from PySide import QtGui
+
+
+class DefinePanel:
+    '''Define the combo-view panel'''
+    def __init__(self):
+        self.form = FreeCADGui.PySideUic.loadUi(path_to_ui)
+
+        param_draft = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Labels")
+        ft = param_draft.GetString("LabelFont", "osifont")
+        self.symbolFont = ft
+        # self.form.leFont.setText(ft) 
+        font_db = QtGui.QFontDatabase()
+        iind = 0
+        prof = 0 
+            
+        for font in font_db.families():
+            if font == ft :
+                prof = iind
+            iind +=1
+            self.form.leFont.addItem(font)
+        self.form.leFont.setCurrentIndex(prof)      
+
+    def accept(self):
+        '''slot: OK pressed'''
+        _font = self.form.leFont.currentText()
+        FreeCAD.ActiveDocument.RecomputesFrozen = True
+        # browse all objects in the view
+        for obj in FreeCADGui.ActiveDocument.Document.Objects:
+            if obj.isDerivedFrom("TechDraw::DrawViewDimension") :
+                _name=obj.Name
+                FreeCADGui.ActiveDocument.getObject(_name).Font = _font
+                '''
+                # must test the Arbitrary property to not overwrite the text
+                
+                if not FreeCAD.ActiveDocument.getObject(_name).Arbitrary :
+                    FreeCAD.ActiveDocument.getObject(_name).FormatSpec = "%.1f"
+                '''
+            elif obj.isDerivedFrom("TechDraw::DrawViewBalloon"):
+                _name=obj.Name
+                FreeCADGui.ActiveDocument.getObject(_name).Font = _font
+            elif obj.isDerivedFrom("TechDraw::DrawViewAnnotation") :
+                _name=obj.Name
+                FreeCAD.ActiveDocument.getObject(_name).Font = _font		
+        FreeCAD.ActiveDocument.RecomputesFrozen = False
+        # FreeCADGui.Control.closeDialog()
+
+path_to_ui = os.path.dirname(__file__) + "/TaskChangeFont.ui"
+panel=DefinePanel() 
+FreeCADGui.Control.showDialog(panel)
