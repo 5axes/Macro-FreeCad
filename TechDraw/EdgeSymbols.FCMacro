@@ -235,43 +235,43 @@ class DefinePanel:
 
         # LineEdit  showing edgePlus:
         self.edgePlus = QtGui.QLineEdit('')
-        self.edgePlus.resize(20,20)
+        self.edgePlus.resize(40,20)
         self.scene.edgePlus = self.scene.addWidget(self.edgePlus)
         self.scene.edgePlus.setPos(0,-75)
 
         # LineEdit  showing edgeMinus:
         self.edgeMinus = QtGui.QLineEdit('-0,5')
-        self.edgeMinus.resize(20,20)
+        self.edgeMinus.resize(40,20)
         self.scene.edgeMinus = self.scene.addWidget(self.edgeMinus)
         self.scene.edgeMinus.setPos(0,-50)
 
         # LineEdit  showing undercutHight:
         self.undercutHight = QtGui.QLineEdit('')
-        self.undercutHight.resize(20,20)
+        self.undercutHight.resize(40,20)
         self.scene.undercutHight = self.scene.addWidget(self.undercutHight)
         self.scene.undercutHight.setPos(-40,-135)
         
         # LineEdit  showing passingHight:
         self.passingHight = QtGui.QLineEdit('')
-        self.passingHight.resize(20,20)
+        self.passingHight.resize(40,20)
         self.scene.passingHight = self.scene.addWidget(self.passingHight)
         self.scene.passingHight.setPos(-40,-110)
 
         # LineEdit  showing undercutLow:
         self.undercutLow = QtGui.QLineEdit('')
-        self.undercutLow.resize(20,20)
+        self.undercutLow.resize(40,20)
         self.scene.undercutLow = self.scene.addWidget(self.undercutLow)
         self.scene.undercutLow.setPos(50,-25)
         
         # LineEdit  showing passingLow:
         self.passingLow = QtGui.QLineEdit('')
-        self.passingLow.resize(20,20)
+        self.passingLow.resize(40,20)
         self.scene.passingLow = self.scene.addWidget(self.passingLow)
         self.scene.passingLow.setPos(50,0)
         
         # LineEdit  showing addition:
         self.leAddition = QtGui.QLineEdit('')
-        self.leAddition.resize(20,20)
+        self.leAddition.resize(40,20)
         self.scene.leAddition = self.scene.addWidget(self.leAddition)
         self.scene.leAddition.setPos(-90,-40)
         self.scene.leAddition.setZValue(1)

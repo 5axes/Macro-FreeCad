@@ -278,7 +278,7 @@ class DefinePanel:
         self.scene.leMethod.setPos(2,-142)
         # LineEdit  showing addition:
         self.leAddition = QtGui.QLineEdit('')
-        self.leAddition.resize(25,20)
+        self.leAddition.resize(40,20)
         self.scene.leAddition = self.scene.addWidget(self.leAddition)
         self.scene.leAddition.setPos(-120,-85)
         self.scene.leAddition.setZValue(-2)
@@ -301,7 +301,7 @@ class DefinePanel:
         self.cbLay = QtGui.QComboBox()
         font = QtGui.QFont(self.symbolFont, 12)
         self.cbLay.setFont(font)
-        self.cbLay.resize(20,20)
+        self.cbLay.resize(40,20)
         for symbol in self.laySymbols:
             self.cbLay.addItem(symbol)
         self.scene.cbLay = self.scene.addWidget(self.cbLay)
