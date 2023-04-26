@@ -51,7 +51,6 @@ import FreeCAD,FreeCADGui
 from PySide import QtCore # neu
 from PySide import QtGui
 
-
 class DefinePanel:
     '''Define the combo-view panel'''
     def __init__(self):
@@ -60,7 +59,6 @@ class DefinePanel:
         param_draft = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/TechDraw/Labels")
         ft = param_draft.GetString("LabelFont", "osifont")
         self.symbolFont = ft
-        # self.form.leFont.setText(ft) 
         font_db = QtGui.QFontDatabase()
         iind = 0
         prof = 0 
@@ -69,12 +67,12 @@ class DefinePanel:
             if font == ft :
                 prof = iind
             iind +=1
-            self.form.leFont.addItem(font)
-        self.form.leFont.setCurrentIndex(prof)      
+            self.form.qcFont.addItem(font)
+        self.form.qcFont.setCurrentIndex(prof)      
 
     def accept(self):
         '''slot: OK pressed'''
-        _font = self.form.leFont.currentText()
+        _font = self.form.qcFont.currentText()
         FreeCAD.ActiveDocument.RecomputesFrozen = True
         # browse all objects in the view
         for obj in FreeCADGui.ActiveDocument.Document.Objects:
