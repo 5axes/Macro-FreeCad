@@ -1,0 +1,7 @@
+import FreeCADGui
+
+# browse all objects in the view
+for obj in FreeCADGui.ActiveDocument.Document.Objects:
+    if obj.isDerivedFrom("TechDraw::DrawViewDimension") or obj.isDerivedFrom("TechDraw::DrawViewLabel") or obj.isDerivedFrom("TechDraw::DrawViewBalloon"):
+       _name=obj.Name
+       FreeCADGui.ActiveDocument.getObject(_name).Font = "osifont"
