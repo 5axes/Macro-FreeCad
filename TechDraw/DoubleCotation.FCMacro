@@ -1,0 +1,21 @@
+# Assumption user is set to Standard Metric Units
+
+newFormatSpec = "%.2f"
+conversion = 25.4
+doc = App.ActiveDocument
+dvp = App.ActiveDocument.View
+for obj in doc.Objects: 
+    if obj.isDerivedFrom("TechDraw::DrawViewDimension"):
+        if obj.Type != 'Angle':
+            if obj.Type == 'Diameter':
+                topoShapeEdge = dvp.getEdgeBySelection(str(obj.References2D).strip("[(<DrawViewPart object',>)]"))
+                imperialLength = round(topoShapeEdge.Length / conversion, 3)
+                obj.FormatSpec = "⌀"+newFormatSpec+" mm / ⌀"+str(imperialLength)+' "'
+            if obj.Type == 'Radius':
+                topoShapeEdge = dvp.getEdgeBySelection(str(obj.References2D).strip("[(<DrawViewPart object',>)]"))
+                imperialLength = round(topoShapeEdge.Length / conversion, 3)
+                obj.FormatSpec = "R"+newFormatSpec+" mm / R"+str(imperialLength)+' "'
+            if obj.Type == 'DistanceX' or obj.Type == 'DistanceY' or obj.Type == 'Distance':
+                topoShapeEdge = dvp.getEdgeBySelection(str(obj.References2D).strip("[(<DrawViewPart object',>)]"))
+                imperialLength = round(topoShapeEdge.Length / conversion, 3)
+                obj.FormatSpec = newFormatSpec+" mm / "+str(imperialLength)+' "'
